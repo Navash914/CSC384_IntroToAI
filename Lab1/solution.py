@@ -66,10 +66,9 @@ def heur_alternate(state):
     h = 0   # heuristic value
     robot_positions = [robot for robot in state.robots]   # Current position of robots
     remaining_storages = [st for st in state.storage if st not in state.boxes]   # Remaining storages for boxes to go into
+    remaining_boxes = [box for box in state.boxes if box not in state.storage]   # Remaining boxes that are not in storage yet
 
-    for box in state.boxes:
-      if box in state.storage:
-        continue    # Box is already in storage
+    for box in remaining_boxes:
       if not box_is_movable(state, box):
         return float('inf')   # Box is unmovable. State cannot be solved
 
@@ -81,38 +80,43 @@ def heur_alternate(state):
       closest_storage_dist = float('inf')
 
       # Find closest robot
-      for i in range(len(robot_positions)):
-        robot = robot_positions[i]
+      for robot in robot_positions:
         dist = abs(box[0] - robot[0]) + abs(box[1] - robot[1])
         if dist < closest_robot_dist:
           closest_robot_dist = dist
-          closest_robot = i
+          closest_robot = robot
 
       # Find closest storage
-      for i in range(len(remaining_storages)):
-        storage = remaining_storages[i]
+      for storage in remaining_storages:
         dist = abs(box[0] - storage[0]) + abs(box[1] - storage[1])
         if dist < closest_storage_dist:
           closest_storage_dist = dist
-          closest_storage = i
+          closest_storage = storage
 
       # Cost to add to heuristic
       cost = closest_robot_dist + closest_storage_dist
 
       # Increase cost for obstacles in shortest path
       if len(state.obstacles) > 0:
-        robot = robot_positions[closest_robot]
+        robot = closest_robot
+        storage = closest_storage
         for x in range(min(robot[0], box[0]), max(robot[0], box[0])):
           if (x, robot[1]) in state.obstacles:
             cost += 2
         for y in range(min(robot[1], box[1]), max(robot[1], box[1])):
           if (box[0], y) in state.obstacles:
             cost += 2
+        for x in range(min(storage[0], box[0]), max(storage[0], box[0])):
+          if (x, box[1]) in state.obstacles:
+            cost += 2
+        for y in range(min(storage[1], box[1]), max(storage[1], box[1])):
+          if (storage[0], y) in state.obstacles:
+            cost += 2
       
       # After moving the box, the robot will be at the storage position, so move the robot there
-      robot_positions[closest_robot] = remaining_storages[closest_storage]
+      robot_positions[robot_positions.index(closest_robot)] = closest_storage
       # Remove storage spot from available storages
-      remaining_storages.pop(closest_storage)
+      remaining_storages.remove(closest_storage)
       # Add cost to heuristic
       h += cost
     return h

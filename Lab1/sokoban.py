@@ -324,3 +324,5 @@ LEFT = Direction("left", (-1, 0))
 
 
   
+PROBLEMS[9].print_state()
+PROBLEMS[17].print_state()
