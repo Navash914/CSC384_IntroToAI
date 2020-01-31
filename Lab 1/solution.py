@@ -65,13 +65,15 @@ def heur_alternate(state):
     #Your function should return a numeric value for the estimate of the distance to the goal.
     h = 0
     robot_positions = []
-    remaining_storages = []
     robot_positions.extend(state.robots)
     remaining_storages = [st for st in state.storage if st not in state.boxes]
     for box in state.boxes:
       if box in state.storage:
         continue
       if not box_is_movable(state, box):
+        #print("Unmovable box for:\n")
+        #state.print_state()
+        #print("\n")
         return float('inf')
       closest_robot = float('inf')
       closest_robot_dist = float('inf')
@@ -85,16 +87,22 @@ def heur_alternate(state):
           closest_robot = i
       for j in range(len(remaining_storages)):
         storage = remaining_storages[j]
-        #if storage in state.boxes:
-        #  continue
         dist = abs(box[0] - storage[0]) + abs(box[1] - storage[1])
         if dist < closest_storage_dist:
           closest_storage_dist = dist
           closest_storage = j
-      #if len(remaining_storages) > 0:
+      cost = closest_robot_dist + closest_storage_dist
+      robot = robot_positions[closest_robot]
+      for x in range(min(robot[0], box[0]), max(robot[0], box[0])):
+        if (x, robot[1]) in state.obstacles:
+          cost += 2
+      for y in range(min(robot[1], box[1]), max(robot[1], box[1])):
+        if (box[0], y) in state.obstacles:
+          cost += 2
       robot_positions[closest_robot] = remaining_storages[closest_storage]
       remaining_storages.pop(closest_storage)
-      h += closest_robot_dist + closest_storage_dist
+      #h += closest_robot_dist + closest_storage_dist
+      h += cost
     return h
 
 def box_is_movable(state, box):
@@ -103,9 +111,17 @@ def box_is_movable(state, box):
 
   if box[0] == 0 or box[0] == state.width-1:
     move_horizontal = False
+    if box[0] == 0 and len([st for st in state.storage if st[0] == 0]) == 0:
+      return False
+    if box[0] == state.width-1 and len([st for st in state.storage if st[0] == state.width-1]) == 0:
+      return False
 
   if box[1] == 0 or box[1] == state.height-1:
     move_vertical = False
+    if box[1] == 0 and len([st for st in state.storage if st[1] == 0]) == 0:
+      return False
+    if box[1] == state.height-1 and len([st for st in state.storage if st[1] == state.height-1]) == 0:
+      return False
 
   if (box[0]-1, box[1]) in state.obstacles or (box[0]+1, box[1]) in state.obstacles:
     move_horizontal = False
@@ -117,15 +133,29 @@ def box_is_movable(state, box):
     return False
 
   if not move_vertical:
-    if (box[0]-1, box[1]) in state.boxes or (box[0]+1, box[1]) in state.boxes:
-      return False
+    #if (box[0]-1, box[1]) in state.boxes or (box[0]+1, box[1]) in state.boxes:
+    #  return False
+
+    if (box[0]-1, box[1]) in state.boxes:
+      if box[1] == 0 or box[1] == state.height-1 or (box[0]-1, box[1]-1) in state.obstacles or (box[0]-1, box[1]+1) in state.obstacles:
+        return False
+    if (box[0]+1, box[1]) in state.boxes:
+      if box[1] == 0 or box[1] == state.height-1 or (box[0]+1, box[1]-1) in state.obstacles or (box[0]+1, box[1]+1) in state.obstacles:
+        return False
+
 
   if not move_horizontal:
-    if (box[0], box[1]-1) in state.boxes or (box[0], box[1]+1) in state.boxes:
-      return False
+    #if (box[0], box[1]-1) in state.boxes or (box[0], box[1]+1) in state.boxes:
+    #  return False
+
+    if (box[0], box[1]-1) in state.boxes:
+      if box[0] == 0 or box[0] == state.width-1 or (box[0]-1, box[1]-1) in state.obstacles or (box[0]+1, box[1]-1) in state.obstacles:
+        return False
+    if (box[0], box[1]+1) in state.boxes:
+      if box[0] == 0 or box[0] == state.width-1 or (box[0]-1, box[1]+1) in state.obstacles or (box[0]+1, box[1]+1) in state.obstacles:
+        return False
 
   return True
-  #return can_move_up(state, box) or can_move_down(state, box) or can_move_left(state, box) or can_move_right(state, box)
 
 def heur_zero(state):
     '''Zero Heuristic can be used to make A* search perform uniform cost search'''
@@ -150,7 +180,7 @@ def fval_function(sN, weight):
     #You must initialize your search engine object as a 'custom' search engine if you supply a custom fval function.
     return sN.gval + weight * sN.hval
 
-def anytime_weighted_astar(initial_state, heur_fn, weight=5., timebound = 10):
+def anytime_weighted_astar(initial_state, heur_fn, weight=1., timebound = 10):
 #IMPLEMENT
   '''Provides an implementation of anytime weighted a-star, as described in the HW1 handout'''
   '''INPUT: a sokoban state that represents the start state and a timebound (number of seconds)'''
@@ -168,7 +198,7 @@ def anytime_weighted_astar(initial_state, heur_fn, weight=5., timebound = 10):
       weight /= 2
       if weight < 1:
         weight = 1
-      new_solution = se.search(new_timebound, (float('inf'), float('inf'), best_solution.gval))
+      new_solution = se.search(new_timebound, (best_solution.gval, best_solution.gval, best_solution.gval))
       if not new_solution:
           return best_solution
       best_solution = new_solution
@@ -184,7 +214,7 @@ def anytime_gbfs(initial_state, heur_fn, timebound = 10):
   '''OUTPUT: A goal state (if a goal is found), else False'''
   '''implementation of weighted astar algorithm'''
   start = os.times()[0]
-  se = SearchEngine('best_first', 'path')
+  se = SearchEngine('best_first', 'full')
   se.init_search(initial_state, sokoban_goal_state, heur_fn)
   best_solution = se.search(timebound)
   if not best_solution:
