@@ -67,12 +67,11 @@ def heur_alternate(state):
     robot_positions = []
     remaining_storages = []
     robot_positions.extend(state.robots)
-    remaining_storages.extend(state.storage)
+    remaining_storages = [st for st in state.storage if st not in state.boxes]
     for box in state.boxes:
       if box in state.storage:
         continue
-      #if not box_is_movable(state, box):
-      if unmoveable(state, box):
+      if not box_is_movable(state, box):
         return float('inf')
       closest_robot = float('inf')
       closest_robot_dist = float('inf')
@@ -98,110 +97,35 @@ def heur_alternate(state):
       h += closest_robot_dist + closest_storage_dist
     return h
 
-#Test:
-def unmoveable(state, box):
-    ''' Check whether the box is in some place that unable to move.'''
-
-    up_wall = False
-    down_wall = False
-    left_wall = False
-    right_wall = False
-    diag_wall = False
-    up_box = False
-    down_box = False
-    left_box = False
-    right_box = False
-    diag_box = False
-
-    up = (box[0], box[1] - 1)
-    down = (box[0], box[1] + 1)
-    left = (box[0] - 1, box[1])
-    right = (box[0] + 1, box[1])
-    diag = (box[0] + 1, box[1] + 1)
-
-    if box[0] == 0 or left in state.obstacles:
-        left_wall = True
-    elif left in state.boxes:
-        left_box = True
-    if box[0] == state.width - 1 or right in state.obstacles:
-        right_wall = True
-    elif right in state.boxes:
-        right_box = True
-    if box[1] == 0 or down in state.obstacles:
-        down_wall = True
-    elif down in state.boxes:
-        down_box = True
-    if box[1] == state.height - 1 or up in state.obstacles:
-        up_wall = True
-    elif up in state.boxes:
-        up_box = True
-    if diag in state.boxes:
-        diag_box = True
-    elif (right_wall or down_wall) or diag in state.obstacles:
-        diag_wall = True
-
-    if ((up_wall or down_wall) and (right_wall or left_wall or right_box or left_box))or((right_wall or left_wall) \
-       and (up_box or down_box)) or ((down_wall or down_box) and (diag_wall or diag_box) and (right_wall or right_box)):
-        return True
-    return False
-
 def box_is_movable(state, box):
-  return can_move_up(state, box) or can_move_down(state, box) or can_move_left(state, box) or can_move_right(state, box)
+  move_vertical = True
+  move_horizontal = True
 
-def can_move_up(state, box):
-  if (box[1] == 0):
+  if box[0] == 0 or box[0] == state.width-1:
+    move_horizontal = False
+
+  if box[1] == 0 or box[1] == state.height-1:
+    move_vertical = False
+
+  if (box[0]-1, box[1]) in state.obstacles or (box[0]+1, box[1]) in state.obstacles:
+    move_horizontal = False
+
+  if (box[0], box[1]-1) in state.obstacles or (box[0], box[1]+1) in state.obstacles:
+    move_vertical = False
+
+  if not move_horizontal and not move_vertical:
     return False
-  new_location = (box[0], box[1]-1)
-  if (new_location in state.obstacles):
-    return False
-  if (new_location in state.boxes):
-    #return can_move_left(state, new_location) or can_move_right(state, new_location) or can_move_up(state, new_location)
-    return False
+
+  if not move_vertical:
+    if (box[0]-1, box[1]) in state.boxes or (box[0]+1, box[1]) in state.boxes:
+      return False
+
+  if not move_horizontal:
+    if (box[0], box[1]-1) in state.boxes or (box[0], box[1]+1) in state.boxes:
+      return False
+
   return True
-
-def can_move_down(state, box):
-  if (box[1] == state.height-1):
-    return False
-  new_location = (box[0], box[1]+1)
-  if (new_location in state.obstacles):
-    return False
-  if (new_location in state.boxes):
-    #return can_move_left(state, new_location) or can_move_right(state, new_location) or can_move_down(state, new_location)
-    return False
-  return True
-
-def can_move_left(state, box):
-  if (box[0] == 0):
-    return False
-  new_location = (box[0]-1, box[1])
-  if (new_location in state.obstacles):
-    return False
-  if (new_location in state.boxes):
-    #return can_move_left(state, new_location) or can_move_up(state, new_location) or can_move_down(state, new_location)
-    return False
-  return True
-
-def can_move_right(state, box):
-  if (box[0] == state.width-1):
-    return False
-  new_location = (box[0]+1, box[1])
-  if (new_location in state.obstacles):
-    return False
-  if (new_location in state.boxes):
-    #return can_move_up(state, new_location) or can_move_right(state, new_location) or can_move_down(state, new_location)
-    return False
-  return True
-
-def box_in_corner(state, box):
-  if box[0] == 0 and box[1] == 0:
-    return True
-  if box[0] == 0 and box[1] == state.height-1:
-    return True
-  if box[0] == state.width-1 and box[1] == 0:
-    return True
-  if box[0] == state.width-1 and box[1] == state.height-1:
-    return True
-  return False
+  #return can_move_up(state, box) or can_move_down(state, box) or can_move_left(state, box) or can_move_right(state, box)
 
 def heur_zero(state):
     '''Zero Heuristic can be used to make A* search perform uniform cost search'''
@@ -244,7 +168,7 @@ def anytime_weighted_astar(initial_state, heur_fn, weight=5., timebound = 10):
       weight /= 2
       if weight < 1:
         weight = 1
-      new_solution = se.search(new_timebound, (best_solution.gval, float('inf'), best_solution.gval))
+      new_solution = se.search(new_timebound, (float('inf'), float('inf'), best_solution.gval))
       if not new_solution:
           return best_solution
       best_solution = new_solution
