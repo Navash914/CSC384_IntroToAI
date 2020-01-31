@@ -1,1 +1,5 @@
-/** WRITE YOUR TIPS IN THIS FILE **/
+Tip #1: Consider the fact that each storage space can contain only one box. The manhattan distance does not account for this and is a drawback of the heuristic.
+
+Tip #2: Some states are "dead" states. These are states that are unsolvable. Figure out if a given state is dead and do not expand it, as it will not lead to a solution.
+
+Tip #3: Moving a box to a storage will also move a robot to a point around that storage. Consider this fact when developing your heuristic.

@@ -320,9 +320,3 @@ UP = Direction("up", (0, -1))
 RIGHT = Direction("right", (1, 0))
 DOWN = Direction("down", (0, 1))
 LEFT = Direction("left", (-1, 0))
-
-
-
-  
-PROBLEMS[9].print_state()
-PROBLEMS[17].print_state()
