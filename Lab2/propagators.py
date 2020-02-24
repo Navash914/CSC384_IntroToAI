@@ -92,15 +92,69 @@ def prop_FC(csp, newVar=None):
     '''Do forward checking. That is check constraints with 
        only one uninstantiated variable. Remember to keep 
        track of all pruned variable,value pairs and return '''
-    #IMPLEMENT
+    pruned = []
+    if newVar is None:
+        constraints = csp.get_all_cons()
+    else:
+        constraints = csp.get_cons_with_var(newVar)
+
+    constraints = [c for c in constraints if c.get_n_unasgn() == 1]
+    
+    for constraint in constraints:
+        assignment = [var.get_assigned_value() for var in constraint.get_scope()]
+        var = constraint.get_unasgn_vars()[0]
+        unassgn_index = constraint.get_scope().index(var)
+        cur_dom = var.cur_domain()
+        for val in cur_dom:
+            assignment[unassgn_index] = val
+            if constraint.check(assignment) is False:
+                var.prune_value(val)
+                pruned.append((var, val))
+        
+        if (var.cur_domain_size() == 0):
+            return (False, pruned)
+    
+    return (True, pruned)
+    
+
+
 
 def prop_GAC(csp, newVar=None):
     '''Do GAC propagation. If newVar is None we do initial GAC enforce 
        processing all constraints. Otherwise we do GAC enforce with
        constraints containing newVar on GAC Queue'''
-    #IMPLEMENT
+    pruned = []
+    if newVar is None:
+        queue = csp.get_all_cons()
+    else:
+        queue = csp.get_cons_with_var(newVar)
+    
+    while len(queue) > 0:
+        constraint = queue.pop(0)
+        for var in constraint.get_scope():
+            for val in var.cur_domain():
+                if constraint.has_support(var, val) is False:
+                    var.prune_value(val)
+                    pruned.append((var, val))
+                    if var.cur_domain_size() == 0:
+                        return (False, pruned)
+                    else:
+                        new_constraints = csp.get_cons_with_var(var)
+                        for new_constraint in new_constraints:
+                            if new_constraint not in queue:
+                                queue.append(new_constraint)
+    
+    return (True, pruned)
+    
 
 def ord_mrv(csp):
     ''' return variable according to the Minimum Remaining Values heuristic '''
-    #IMPLEMENT
+    min_var = None
+    mrv = float('inf')
+    for var in csp.vars:
+        size = var.cur_domain_size()
+        if size < mrv:
+            mrv = size
+            min_var = var
+    return min_var
 	
