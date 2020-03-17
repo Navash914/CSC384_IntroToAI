@@ -5,11 +5,12 @@ An AI player for Othello.
 import random
 import sys
 import time
+import heapq
 
 # You can use the functions in othello_shared to write your AI
 from othello_shared import find_lines, get_possible_moves, get_score, play_move
 
-state_ut = {}
+state_ut = {}   # Cache
 
 def eprint(*args, **kwargs): #you can use this for debugging, as it will print to sterr and not stdout
     print(*args, file=sys.stderr, **kwargs)
@@ -21,18 +22,15 @@ def compute_utility(board, color):
 
 # Better heuristic value of board
 def compute_heuristic(board, color): #not implemented, optional
-    #IMPLEMENT
-    return 0 #change this!
+    return compute_utility(board, color)
 
 ############ MINIMAX ###############################
 def minimax_min_node(board, color, limit, caching = 0):
     global state_ut
 
-    opp_color = 1 + color % 2
-    cache_key = (board, opp_color)
-
     if limit <= 0:
-        return (None, compute_utility(board, color))
+        return (None, compute_heuristic(board, color))
+    opp_color = 1 + color % 2
     moves = get_possible_moves(board, opp_color)
     if len(moves) == 0:
         return (None, compute_utility(board, color))
@@ -40,10 +38,11 @@ def minimax_min_node(board, color, limit, caching = 0):
     min_move = None
     min_move_val = float('inf')
     for move in moves:
+        new_board = play_move(board, opp_color, move[0], move[1])
+        cache_key = (new_board, opp_color)
         if caching and cache_key in state_ut:
             utility = state_ut[cache_key]
         else:
-            new_board = play_move(board, opp_color, move[0], move[1])
             utility = minimax_max_node(new_board, color, limit-1, caching)[1]
             if caching:
                 state_ut[cache_key] = utility
@@ -55,10 +54,9 @@ def minimax_min_node(board, color, limit, caching = 0):
 
 def minimax_max_node(board, color, limit, caching = 0): #returns highest possible utility
     global state_ut
-    cache_key = (board, color)
 
     if limit <= 0:
-        return (None, compute_utility(board, color))
+        return (None, compute_heuristic(board, color))
     moves = get_possible_moves(board, color)
     if len(moves) == 0:
         return (None, compute_utility(board, color))
@@ -66,10 +64,11 @@ def minimax_max_node(board, color, limit, caching = 0): #returns highest possibl
     max_move = None
     max_move_val = -float('inf')
     for move in moves:
+        new_board = play_move(board, color, move[0], move[1])
+        cache_key = (new_board, color)
         if caching and cache_key in state_ut:
             utility = state_ut[cache_key]
         else:
-            new_board = play_move(board, color, move[0], move[1])
             utility = minimax_min_node(new_board, color, limit-1, caching)[1]
             if caching:
                 state_ut[cache_key] = utility
@@ -99,23 +98,32 @@ def select_move_minimax(board, color, limit, caching = 0):
 def alphabeta_min_node(board, color, alpha, beta, limit, caching = 0, ordering = 0):
     global state_ut
 
-    opp_color = 1 + color % 2
-    cache_key = (board, opp_color)
-
     if limit <= 0:
-        return (None, compute_utility(board, color))
+        return (None, compute_heuristic(board, color))
     opp_color = 1 + color % 2
     moves = get_possible_moves(board, opp_color)
     if len(moves) == 0:
         return (None, compute_utility(board, color))
+
+    successors, heap = [], []
+    for move in moves:
+        new_board = play_move(board, opp_color, move[0], move[1])
+        if ordering:
+            heapq.heappush(heap, (compute_utility(new_board, color), (new_board, move)))
+        else:
+            successors.append((new_board, move))
+    
+    if ordering:
+        while heap:
+            successors.append(heapq.heappop(heap)[1])
     
     min_move = None
     min_move_val = float('inf')
-    for move in moves:
+    for new_board, move in successors:
+        cache_key = (new_board, opp_color)
         if caching and cache_key in state_ut:
             utility = state_ut[cache_key]
         else:
-            new_board = play_move(board, opp_color, move[0], move[1])
             utility = alphabeta_max_node(new_board, color, alpha, beta, limit-1, caching, ordering)[1]
             if caching:
                 state_ut[cache_key] = utility
@@ -131,21 +139,32 @@ def alphabeta_min_node(board, color, alpha, beta, limit, caching = 0, ordering =
 
 def alphabeta_max_node(board, color, alpha, beta, limit, caching = 0, ordering = 0):
     global state_ut
-    cache_key = (board, color)
 
     if limit <= 0:
-        return (None, compute_utility(board, color))
+        return (None, compute_heuristic(board, color))
     moves = get_possible_moves(board, color)
     if len(moves) == 0:
         return (None, compute_utility(board, color))
+
+    successors, heap = [], []
+    for move in moves:
+        new_board = play_move(board, color, move[0], move[1])
+        if ordering:
+            heapq.heappush(heap, (-1 * compute_utility(new_board, color), (new_board, move)))
+        else:
+            successors.append((new_board, move))
+    
+    if ordering:
+        while heap:
+            successors.append(heapq.heappop(heap)[1])
     
     max_move = None
     max_move_val = -float('inf')
-    for move in moves:
+    for new_board, move in successors:
+        cache_key = (new_board, color)
         if caching and cache_key in state_ut:
             utility = state_ut[cache_key]
         else:
-            new_board = play_move(board, color, move[0], move[1])
             utility = alphabeta_min_node(new_board, color, alpha, beta, limit-1, caching, ordering)[1]
             if caching:
                 state_ut[cache_key] = utility
