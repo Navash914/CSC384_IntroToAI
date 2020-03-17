@@ -29,7 +29,7 @@ def minimax_min_node(board, color, limit, caching = 0):
     global state_ut
 
     if limit <= 0:
-        return (None, compute_heuristic(board, color))
+        return (None, compute_utility(board, color))
     opp_color = 1 + color % 2
     moves = get_possible_moves(board, opp_color)
     if len(moves) == 0:
@@ -56,7 +56,7 @@ def minimax_max_node(board, color, limit, caching = 0): #returns highest possibl
     global state_ut
 
     if limit <= 0:
-        return (None, compute_heuristic(board, color))
+        return (None, compute_utility(board, color))
     moves = get_possible_moves(board, color)
     if len(moves) == 0:
         return (None, compute_utility(board, color))
@@ -99,7 +99,7 @@ def alphabeta_min_node(board, color, alpha, beta, limit, caching = 0, ordering =
     global state_ut
 
     if limit <= 0:
-        return (None, compute_heuristic(board, color))
+        return (None, compute_utility(board, color))
     opp_color = 1 + color % 2
     moves = get_possible_moves(board, opp_color)
     if len(moves) == 0:
@@ -141,7 +141,7 @@ def alphabeta_max_node(board, color, alpha, beta, limit, caching = 0, ordering =
     global state_ut
 
     if limit <= 0:
-        return (None, compute_heuristic(board, color))
+        return (None, compute_utility(board, color))
     moves = get_possible_moves(board, color)
     if len(moves) == 0:
         return (None, compute_utility(board, color))
