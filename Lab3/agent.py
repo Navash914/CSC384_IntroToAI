@@ -78,12 +78,49 @@ def select_move_minimax(board, color, limit, caching = 0):
 
 ############ ALPHA-BETA PRUNING #####################
 def alphabeta_min_node(board, color, alpha, beta, limit, caching = 0, ordering = 0):
-    #IMPLEMENT
-    return ((0,0),0) #change this!
+    if limit <= 0:
+        return (None, compute_utility(board, color))
+    opp_color = 1 + color % 2
+    moves = get_possible_moves(board, opp_color)
+    if len(moves) == 0:
+        return (None, compute_utility(board, color))
+    
+    min_move = None
+    min_move_val = float('inf')
+    for move in moves:
+        new_board = play_move(board, opp_color, move[0], move[1])
+        utility = alphabeta_max_node(new_board, color, alpha, beta, limit-1, caching, ordering)[1]
+        if utility < min_move_val:
+            min_move_val = utility
+            min_move = move
+        if beta > min_move_val:
+            beta = min_move_val
+        if alpha >= beta:
+            break
+    
+    return (min_move, min_move_val)
 
 def alphabeta_max_node(board, color, alpha, beta, limit, caching = 0, ordering = 0):
-    #IMPLEMENT
-    return ((0,0),0) #change this!
+    if limit <= 0:
+        return (None, compute_utility(board, color))
+    moves = get_possible_moves(board, color)
+    if len(moves) == 0:
+        return (None, compute_utility(board, color))
+    
+    max_move = None
+    max_move_val = -float('inf')
+    for move in moves:
+        new_board = play_move(board, color, move[0], move[1])
+        utility = alphabeta_min_node(new_board, color, alpha, beta, limit-1, caching, ordering)[1]
+        if utility > max_move_val:
+            max_move_val = utility
+            max_move = move
+        if alpha < max_move_val:
+            alpha = max_move_val
+        if alpha >= beta:
+            break
+    
+    return (max_move, max_move_val)
 
 def select_move_alphabeta(board, color, limit, caching = 0, ordering = 0):
     """
@@ -100,8 +137,7 @@ def select_move_alphabeta(board, color, limit, caching = 0, ordering = 0):
     If ordering is ON (i.e. 1), use node ordering to expedite pruning and reduce the number of state evaluations. 
     If ordering is OFF (i.e. 0), do NOT use node ordering to expedite pruning and reduce the number of state evaluations. 
     """
-    #IMPLEMENT
-    return (0,0) #change this!
+    return alphabeta_max_node(board, color, -float('inf'), float('inf'), limit, caching, ordering)[0]
 
 ####################################################
 def run_ai():
