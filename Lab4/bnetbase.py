@@ -305,7 +305,7 @@ def multiply_factors(Factors):
         for var in factor.get_scope():
             if var not in scope:
                 scope.append(var)
-    name = "_".join(name)
+    name = "*".join(name)
 
     product = Factor(name, scope)
     recursive_multiply_factors(Factors, product, scope)
@@ -460,5 +460,33 @@ def VE(Net, QueryVar, EvidenceVars):
    mean that Pr(A='a'|B=1, C='c') = 0.5 Pr(A='a'|B=1, C='c') = 0.24
    Pr(A='a'|B=1, C='c') = 0.26
     '''
-    return [0, 0]
+    F = Net.factors()
+    Z = Net.variables()
+    for var in EvidenceVars:
+        Z.remove(var)
+    Z.remove(QueryVar)
+    
+    # Step 1
+    for i in range(len(F)):
+        for e in EvidenceVars:
+            if e in F[i].get_scope():
+                F[i] = restrict_factor(F[i], e, e.get_evidence())
+    
+    # Step 2
+    for z in Z:
+        relevent_factors = []
+        for factor in F:
+            if z in factor.get_scope():
+                relevent_factors.append(factor)
+        
+        if len(relevent_factors) > 0:
+            g = multiply_factors(relevent_factors)
+            g = sum_out_variable(g, z)
 
+            for factor in relevent_factors:
+                F.remove(factor)
+            F.append(g)
+    
+    # Step 3
+    product = multiply_factors(F)
+    return normalize(product.values)
