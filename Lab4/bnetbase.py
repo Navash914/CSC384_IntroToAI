@@ -297,19 +297,73 @@ class BN:
 
 def multiply_factors(Factors):
     '''return a new factor that is the product of the factors in Fators'''
-     #IMPLEMENT
+    
+    name = []
+    scope = []
+    for factor in Factors:
+        name.append(factor.name)
+        for var in factor.get_scope():
+            if var not in scope:
+                scope.append(var)
+    name = "_".join(name)
+
+    product = Factor(name, scope)
+    recursive_multiply_factors(Factors, product, scope)
+
+    return product
+
+def recursive_multiply_factors(Factors, product, vars):
+    if len(vars) == 0:
+        value = 1
+        for factor in Factors:
+            value *= factor.get_value_at_current_assignments()
+        product.add_value_at_current_assignment(value)
+    else:
+        for val in vars[0].domain():
+            vars[0].set_assignment(val)
+            recursive_multiply_factors(Factors, product, vars[1:])
 
 def restrict_factor(f, var, value):
     '''f is a factor, var is a Variable, and value is a value from var.domain.
     Return a new factor that is the restriction of f by this var = value.
     Don't change f! If f has only one variable its restriction yields a
     constant factor'''
-    #IMPLEMENT
+    
+    name = "{}_{}={}".format(f.name, var.name, value)
+    scope = f.get_scope()
+    scope.remove(var)
+    var.set_assignment(value)
+
+    restricted_f = Factor(name, scope)
+    recursive_restrict_factor(f, restricted_f, scope)
+
+    return restricted_f
+
+def recursive_restrict_factor(f, restricted_f, vars):
+    if len(vars) == 0:
+        value = f.get_value_at_current_assignments()
+        restricted_f.add_value_at_current_assignment(value)
+    else:
+        for val in vars[0].domain():
+            vars[0].set_assignment(val)
+            recursive_restrict_factor(f, restricted_f, vars[1:])
 
 def sum_out_variable(f, var):
     '''return a new factor that is the product of the factors in Factors
        followed by the suming out of Var'''
-    #IMPLEMENT
+
+    name = "{}_sum_{}".format(f.name, var.name)
+    scope = f.get_scope()
+    scope.remove(var)
+
+    sum_f = Factor(name, scope)
+
+    for val in var.domain():
+        restricted_f = restrict_factor(f, var, val)
+        for i in range(len(restricted_f.values)):
+            sum_f.values[i] += restricted_f.values[i]
+
+    return sum_f
 
 def normalize(nums):
     '''take as input a list of number and return a new list of numbers where
@@ -406,5 +460,5 @@ def VE(Net, QueryVar, EvidenceVars):
    mean that Pr(A='a'|B=1, C='c') = 0.5 Pr(A='a'|B=1, C='c') = 0.24
    Pr(A='a'|B=1, C='c') = 0.26
     '''
-    #IMPLEMENT
+    return [0, 0]
 
